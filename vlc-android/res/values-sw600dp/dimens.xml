@@ -1,0 +1,14 @@
+<resources>
+    <dimen name="grid_card_thumb_width">250dp</dimen>
+    <dimen name="grid_card_thumb_height">150dp</dimen>
+    <dimen name="grid_card_title_text_size">16sp</dimen>
+    <dimen name="grid_card_subtitle_text_size">12sp</dimen>
+    <dimen name="grid_card_vertical_spacing">10dp</dimen>
+    <!-- Video Player -->
+    <dimen name="media_ctrl_margin_top">30dp</dimen>
+    <dimen name="images_margin_sides">60dp</dimen>
+    <dimen name="overlay_margin">10dp</dimen>
+
+    <dimen name="file_picker_width">600dip</dimen>
+    <dimen name="audio_player_cover_margin">60dp</dimen>
+</resources>

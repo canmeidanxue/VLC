@@ -1,0 +1,238 @@
+apply plugin: 'com.android.application'
+
+android {
+    packagingOptions {
+       //exclude 'lib/armeabi-v7a/libc++_shared.so'
+    }
+
+    dexOptions {
+        maxProcessCount 8
+        javaMaxHeapSize "1g"
+        preDexLibraries true
+    }
+
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    flavorDimensions "target", "abi"
+
+    lintOptions {
+        abortOnError false
+        disable 'MissingTranslation', 'ExtraTranslation'
+    }
+
+    task luaPlaylistCopy(type: Copy) {
+        from '../vlc/share/lua/playlist'
+        into 'assets/lua/playlist'
+        exclude '**/*.txt'
+    }
+
+    task luaMetaCopy(type: Copy) {
+        from '../vlc/share/lua/meta'
+        into 'assets/lua/meta'
+        exclude '**/*.txt'
+    }
+
+    dataBinding {
+        enabled = true
+    }
+
+    defaultConfig {
+        applicationId "org.videolan.vlc"
+
+        resValue "string", "build_time", buildTime()
+        resValue "string", "build_host", hostName()
+        resValue "string", "build_revision", revision()
+        resValue "string", "build_vlc_revision", vlcRevision()
+
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.versionCode
+        versionName rootProject.ext.versionName
+
+        tasks.whenTaskAdded { task ->
+            if (task.name.startsWith('merge')) {
+                task.dependsOn luaPlaylistCopy
+                task.dependsOn luaMetaCopy
+            }
+        }
+
+        //Set the build ABI according to build types only if not launched from compile.sh
+        if (System.getenv('CLI') == null)
+            tasks.whenTaskAdded { task ->
+                if (task.name.startsWith('assemble')) {
+                    if (task.name.endsWith('ARMv7Debug'))
+                        task.dependsOn(":libvlc:buildDebugARMv7")
+                    else if (task.name.endsWith('ARMv8Debug'))
+                        task.dependsOn(":libvlc:buildDebugARM64")
+                    else if (task.name.endsWith('X86Debug'))
+                        task.dependsOn(":libvlc:buildDebugx86")
+                    else if (task.name.endsWith('X86_64Debug'))
+                        task.dependsOn(":libvlc:buildDebugx86_64")
+                    else if (task.name.endsWith('MIPSDebug'))
+                        task.dependsOn(":libvlc:buildDebugMIPS")
+                    else if (task.name.endsWith('MIPS64Debug'))
+                        task.dependsOn(":libvlc:buildDebugMIPS64")
+                }
+            }
+    }
+
+    signingConfigs {
+        release {
+            /*
+            To set this properties, create file gradle.properties with these 3 props.
+            e.g.
+            keyStoreFile=/home/<username>/.android/debug.keystore
+            storealias=androiddebugkey
+            storepwd=android
+             */
+            storeFile file(keyStoreFile)
+            keyAlias storealias
+            if (System.getenv('PASSWORD_KEYSTORE') != null && !System.getenv('PASSWORD_KEYSTORE').isEmpty()){
+                storePassword = System.getenv('PASSWORD_KEYSTORE')
+                keyPassword = System.getenv('PASSWORD_KEYSTORE')
+            } else {
+                storePassword storepwd
+                keyPassword storepwd
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig null
+            minifyEnabled true
+            shrinkResources false
+            proguardFile 'proguard.cfg'
+        }
+        signedRelease {
+            initWith release
+            signingConfig = signingConfigs.release
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            jniDebuggable true
+        }
+    }
+    productFlavors {
+        vanilla {
+            dimension "target"
+            versionCode = 1
+        }
+        chrome {
+            minSdkVersion 19
+            dimension "target"
+            versionCode = 2
+        }
+        ARMv7 {
+            dimension "abi"
+            versionCode = 4
+        }
+        x86 {
+            dimension "abi"
+            versionCode = 5
+        }
+        MIPS {
+            dimension "abi"
+            versionCode = 6
+        }
+        ARMv8 {
+            dimension "abi"
+            versionCode = 7
+        }
+        x86_64 {
+            dimension "abi"
+            versionCode = 8
+        }
+        MIPS64 {
+            dimension "abi"
+            versionCode = 9
+        }
+    }
+
+    // make per-variant version code
+    applicationVariants.all { variant ->
+        // set the composite code
+        variant.mergedFlavor.versionCode = variant.productFlavors.get(0).versionCode * 10000000 + defaultConfig.versionCode + variant.productFlavors.get(1).versionCode
+
+        //Custom APK name
+        variant.outputs.each { output ->
+            def outputName = "VLC-Android-"
+            if (variant.productFlavors.get(0).name != "vanilla")
+                outputName += variant.productFlavors.get(0).name.toUpperCase() + "-"
+            outputName += variant.versionName + "-" + variant.productFlavors.get(1).name + ".apk"
+            output.outputFile = new File(output.outputFile.parentFile, outputName);
+        }
+    }
+
+    sourceSets.main {
+        manifest.srcFile 'AndroidManifest.xml'
+        java.srcDirs = ['src']
+        resources.srcDirs = ['src']
+        aidl.srcDirs = ['src']
+        renderscript.srcDirs = ['src']
+        res.srcDirs = ['res']
+        assets.srcDirs = ['assets']
+    }
+    sourceSets.release {
+        manifest.srcFile 'flavors/release/AndroidManifest.xml'
+    }
+    sourceSets.debug {
+        res.srcDirs = ['flavors/debug/res']
+    }
+    sourceSets.test {
+        java.srcDirs = ['test']
+    }
+    sourceSets.chrome {
+        manifest.srcFile 'flavors/chrome/AndroidManifest.xml'
+        res.srcDirs = ['flavors/chrome/res']
+    }
+}
+
+task generateSources (type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+
+dependencies {
+    compile project(':libvlc')
+    compile project(':medialibrary')
+    compile project(':api')
+    compile project(':axmlrpc')
+    compile "com.android.support:recyclerview-v7:$rootProject.ext.appCompatVersion"
+    compile "com.android.support:design:$rootProject.ext.appCompatVersion"
+    compile "com.android.support:support-annotations:$rootProject.ext.appCompatVersion"
+    compile "com.android.support:preference-v7:$rootProject.ext.appCompatVersion"
+    compile "com.android.support:leanback-v17:$rootProject.ext.appCompatVersion"
+    compile "com.android.support:preference-leanback-v17:$rootProject.ext.appCompatVersion"
+    compile "com.android.support.constraint:constraint-layout:$rootProject.ext.constraintLayoutVersion"
+    testCompile 'junit:junit:4.12'
+}
+
+static def buildTime() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
+static def hostName() {
+    return System.getProperty("user.name") + "@" + InetAddress.localHost.hostName
+}
+
+def revision() {
+    def code = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        standardOutput = code
+    }
+    return code.toString()
+}
+
+def vlcRevision() {
+    def vlc = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        workingDir '../vlc'
+        standardOutput = vlc
+    }
+    return vlc.toString()
+}
+

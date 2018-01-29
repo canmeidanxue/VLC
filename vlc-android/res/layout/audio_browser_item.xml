@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:vlc="http://schemas.android.com/apk/res-auto">
+    <data>
+        <import type="android.view.View"/>
+        <import type="android.text.TextUtils"/>
+        <import type="org.videolan.medialibrary.media.MediaLibraryItem"/>
+        <variable
+            name="alignMode"
+            type="int" />
+        <variable
+            name="item"
+            type="MediaLibraryItem"/>
+        <variable
+            name="cover"
+            type="android.graphics.drawable.BitmapDrawable"/>
+        <variable
+            name="bgColor"
+            type="int" />
+        <variable
+            name="holder"
+            type="org.videolan.vlc.gui.audio.AudioBrowserAdapter.MediaItemViewHolder" />
+    </data>
+
+    <android.support.constraint.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:longClickable="true"
+        android:clickable="true"
+        android:focusable="@{item.getItemType() != MediaLibraryItem.TYPE_DUMMY}"
+        android:onClick="@{holder::onClick}"
+        android:onLongClick="@{holder::onLongClick}"
+        android:background="@{bgColor}" >
+
+        <!-- Image loading is handled by org.videolan.vlc.gui.helpers.AsyncImageLoader.loadPicture() -->
+        <ImageView
+            android:id="@+id/media_cover"
+            android:layout_width="@dimen/audio_browser_item_size"
+            android:layout_height="@dimen/audio_browser_item_size"
+            vlc:layout_constraintStart_toStartOf="parent"
+            vlc:layout_constraintTop_toTopOf="parent"
+            vlc:layout_constraintBottom_toBottomOf="parent"
+            android:layout_gravity="center"
+            vlc:media="@{item}"
+            android:background="@{cover}"
+            android:visibility="@{(item.getItemType() &amp; (MediaLibraryItem.TYPE_ALBUM|MediaLibraryItem.TYPE_ARTIST|MediaLibraryItem.TYPE_MEDIA)) != 0 ? View.VISIBLE : View.GONE}"/>
+
+
+        <!-- TextView must be set to singleLine
+            see https://code.google.com/p/android/issues/detail?id=33868 -->
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            vlc:layout_constraintVertical_chainStyle="packed"
+            vlc:layout_constraintTop_toTopOf="parent"
+            vlc:layout_constraintStart_toEndOf="@+id/media_cover"
+            vlc:layout_constraintEnd_toStartOf="@+id/item_more"
+            android:layout_marginStart="@dimen/half_default_margin"
+            android:layout_marginLeft="@dimen/half_default_margin"
+            vlc:layout_constraintBottom_toTopOf="@+id/subtitle"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:gravity="center_vertical"
+            android:ellipsize="end"
+            vlc:alignMode="@{alignMode}"
+            android:text="@{item.title}"
+            android:fontFamily="sans-serif-light"
+            android:textColor="?attr/list_title"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/subtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            vlc:layout_constraintTop_toBottomOf="@+id/title"
+            vlc:layout_constraintStart_toStartOf="@+id/title"
+            vlc:layout_constraintEnd_toEndOf="@+id/title"
+            vlc:layout_constraintBottom_toBottomOf="parent"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="middle"
+            android:text="@{item.description}"
+            android:fontFamily="sans-serif-light"
+            android:textColor="?attr/list_subtitle"
+            android:visibility="@{TextUtils.isEmpty(item.description) ? View.GONE : View.VISIBLE}"/>
+
+        <ImageView
+            android:id="@+id/item_more"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            vlc:layout_constraintEnd_toEndOf="parent"
+            vlc:layout_constraintTop_toTopOf="parent"
+            vlc:layout_constraintBottom_toBottomOf="parent"
+            android:scaleType="center"
+            android:src="@drawable/ic_more"
+            android:contentDescription="@string/more_actions"
+            android:onClick="@{holder::onMoreClick}" />
+    </android.support.constraint.ConstraintLayout>
+</layout>
